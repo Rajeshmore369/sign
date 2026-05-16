@@ -13,7 +13,7 @@ This repository runs most reliably with Python 3.10.
 1. Open PowerShell in the project folder and create a virtual environment:
 
   ```powershell
-  cd "C:\Users\Trisha\Downloads\Seminar topic ME\Sign-Language-To-Text-and-Speech-Conversion-master"
+  cd "C:\Users\path"
   & "$env:LocalAppData\Programs\Python\Python310\python.exe" -m venv .venv
   .\\.venv\\Scripts\\Activate.ps1
   python -m pip install --upgrade pip
