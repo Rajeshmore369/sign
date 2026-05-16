@@ -41,7 +41,10 @@ class Application:
         self.speak_engine=pyttsx3.init()
         self.speak_engine.setProperty("rate",100)
         voices=self.speak_engine.getProperty("voices")
-        self.speak_engine.setProperty("voice",voices[0].id)
+        if voices:
+            self.speak_engine.setProperty("voice",voices[0].id)
+        self.auto_speak_enabled = True
+        self.last_auto_spoken_phrase = ""
 
         self.ct = {}
         self.ct['blank'] = 0
@@ -61,9 +64,9 @@ class Application:
 
 
         self.root = tk.Tk()
-        self.root.title("Sign Language To Text Conversion")
+        self.root.title("Sign Language To Text And Speech Conversion")
         self.root.protocol('WM_DELETE_WINDOW', self.destructor)
-        self.root.geometry("1300x700")
+        self.root.geometry("1550x820")
 
         self.panel = tk.Label(self.root)
         self.panel.place(x=100, y=3, width=480, height=640)
@@ -73,7 +76,7 @@ class Application:
 
         self.T = tk.Label(self.root)
         self.T.place(x=60, y=5)
-        self.T.config(text="Sign Language To Text Conversion", font=("Courier", 30, "bold"))
+        self.T.config(text="Sign Language To Text And Speech Conversion", font=("Courier", 30, "bold"))
 
         self.panel3 = tk.Label(self.root)  # Current Symbol
         self.panel3.place(x=280, y=585)
@@ -107,12 +110,16 @@ class Application:
         self.b4.place(x=990, y=700)
 
         self.speak = tk.Button(self.root)
-        self.speak.place(x=1305, y=630)
-        self.speak.config(text="Speak", font=("Courier", 20), wraplength=100, command=self.speak_fun)
+        self.speak.place(x=1170, y=620, width=150, height=55)
+        self.speak.config(text="Speak", font=("Courier", 20), wraplength=120, command=self.speak_fun)
 
         self.clear = tk.Button(self.root)
-        self.clear.place(x=1205, y=630)
-        self.clear.config(text="Clear", font=("Courier", 20), wraplength=100, command=self.clear_fun)
+        self.clear.place(x=1330, y=620, width=150, height=55)
+        self.clear.config(text="Clear", font=("Courier", 20), wraplength=120, command=self.clear_fun)
+
+        self.auto_speak = tk.Button(self.root)
+        self.auto_speak.place(x=1170, y=690, width=310, height=55)
+        self.update_auto_speak_button()
 
 
 
@@ -309,6 +316,7 @@ class Application:
         last_idx = len(self.str)
         self.str = self.str[:idx_word]
         self.str = self.str + self.word1.upper()
+        self.last_auto_spoken_phrase = ""
 
 
     def action2(self):
@@ -317,6 +325,7 @@ class Application:
         last_idx = len(self.str)
         self.str=self.str[:idx_word]
         self.str=self.str+self.word2.upper()
+        self.last_auto_spoken_phrase = ""
         #self.str[idx_word:last_idx] = self.word2
 
 
@@ -326,6 +335,7 @@ class Application:
         last_idx = len(self.str)
         self.str = self.str[:idx_word]
         self.str = self.str + self.word3.upper()
+        self.last_auto_spoken_phrase = ""
 
 
 
@@ -335,11 +345,54 @@ class Application:
         last_idx = len(self.str)
         self.str = self.str[:idx_word]
         self.str = self.str + self.word4.upper()
+        self.last_auto_spoken_phrase = ""
+
+
+    def update_auto_speak_button(self):
+        button_text = "Auto Speak: ON" if self.auto_speak_enabled else "Auto Speak: OFF"
+        self.auto_speak.config(text=button_text, font=("Courier", 18), wraplength=280, command=self.toggle_auto_speak)
+
+
+    def normalize_text(self, text):
+        return " ".join(text.split())
+
+
+    def speak_text(self, text):
+        phrase = self.normalize_text(text)
+        if not phrase:
+            return
+        self.speak_engine.stop()
+        self.speak_engine.say(phrase)
+        self.speak_engine.runAndWait()
+
+
+    def toggle_auto_speak(self):
+        self.auto_speak_enabled = not self.auto_speak_enabled
+        if not self.auto_speak_enabled:
+            self.last_auto_spoken_phrase = ""
+        self.update_auto_speak_button()
+
+
+    def handle_auto_speak(self):
+        if not self.auto_speak_enabled:
+            return
+
+        completed_phrase = ""
+        if self.str.endswith(" "):
+            completed_phrase = self.normalize_text(self.str)
+
+        if completed_phrase and completed_phrase != self.last_auto_spoken_phrase:
+            self.speak_text(completed_phrase.split()[-1])
+            self.last_auto_spoken_phrase = completed_phrase
+            return
+
+        current_text = self.normalize_text(self.str)
+        if self.last_auto_spoken_phrase and not current_text.startswith(self.last_auto_spoken_phrase):
+            self.last_auto_spoken_phrase = ""
 
 
     def speak_fun(self):
-        self.speak_engine.say(self.str)
-        self.speak_engine.runAndWait()
+        self.speak_text(self.str)
 
 
     def clear_fun(self):
@@ -348,6 +401,7 @@ class Application:
         self.word2 = " "
         self.word3 = " "
         self.word4 = " "
+        self.last_auto_spoken_phrase = ""
 
     def predict(self, test_image):
         white=test_image
@@ -766,6 +820,7 @@ class Application:
         self.current_symbol=ch1
         self.count += 1
         self.ten_prev_char[self.count%10]=ch1
+        self.handle_auto_speak()
 
 
         if len(self.str.strip())!=0:
